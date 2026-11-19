@@ -88,6 +88,20 @@ Si quieres la línea siempre visible, usa "una entidad por línea".
 2. Busca "RED Nacional" e instálalo.
 3. Reinicia Home Assistant.
 
+### Icono
+
+La integración trae su propio icono en `custom_components/red_movilidad/brand/`.
+Home Assistant lo muestra a partir de la **versión 2026.4**; en versiones
+anteriores aparece "icon not available", sin que afecte al funcionamiento.
+
+Es un diseño original: no usa el logo de RED, de Red Regional ni de Home
+Assistant. Para cambiar sus colores, edítalos al principio de
+`scripts/generar_icono.py` y ejecútalo (necesita Pillow):
+
+```bash
+python3 scripts/generar_icono.py
+```
+
 ## **Configuración**
 
 **Ajustes** → **Dispositivos y servicios** → **+ Añadir integración** → "RED Nacional". Primero eliges **Santiago** o **Regiones**.
