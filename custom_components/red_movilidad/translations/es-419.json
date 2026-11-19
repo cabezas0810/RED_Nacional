@@ -81,7 +81,8 @@
       "gtfs_no_disponible": "No se pudo descargar la lista de paraderos de esta ciudad. Vuelve a intentarlo en unos segundos."
     },
     "abort": {
-      "already_configured": "Ese paradero ya está configurado con esa línea o modo."
+      "already_configured": "Ese paradero ya está configurado con esa línea o modo.",
+      "lineas_duplicadas": "La línea {lineas} de este paradero ya tiene sensores en la entrada «{entrada}». Para cambiarla, usa Configurar en esa entrada o bórrala primero."
     }
   },
   "options": {
@@ -99,6 +100,15 @@
           "modo": "Modo"
         }
       }
+    },
+    "error": {
+      "lineas_duplicadas": "La línea {lineas} ya tiene sensores en otra entrada de este paradero: «{entrada}». Elige otra línea o cambia antes esa entrada."
+    }
+  },
+  "issues": {
+    "lineas_duplicadas": {
+      "title": "Líneas repetidas en dos entradas del mismo paradero",
+      "description": "La entrada «{entrada}» no tiene sensores para la línea {lineas}, porque ya los tiene la entrada «{otra}» del mismo paradero. Dos entradas no pueden compartir línea.\n\nBorra la que no necesites en Ajustes → Dispositivos y servicios, o cambia su línea con Configurar. Después reinicia Home Assistant para que desaparezca este aviso."
     }
   }
 }

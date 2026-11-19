@@ -96,6 +96,63 @@ def lineas_del_paradero(codigo):
     return sorted(lineas, key=clave_linea)
 
 
+def titulo_de_entrada(datos):
+    """'Nombre (CÓDIGO) - Ciudad - línea X' o '... - todas las líneas'."""
+    codigo = datos.get(CONF_CODIGO, "")
+    titulo = f"{datos.get(CONF_NOMBRE) or codigo} ({codigo})"
+    if datos.get(CONF_SISTEMA) == SISTEMA_REGIONAL and datos.get(CONF_ZONA_NOMBRE):
+        titulo += f" - {datos[CONF_ZONA_NOMBRE]}"
+    if datos.get(CONF_LINEA):
+        titulo += f" - línea {datos[CONF_LINEA]}"
+    elif datos.get(CONF_MODO) == MODO_POR_LINEA:
+        titulo += " - todas las líneas"
+    return titulo
+
+
+def _lineas_con_sensor(datos):
+    """Líneas que tienen sensores propios en una entrada: {minúsculas: original}.
+
+    Una entrada con línea fija y una de "todas las líneas" del mismo paradero
+    crean los MISMOS sensores para las líneas que comparten (mismo id), así
+    que no pueden convivir: Home Assistant descartaría los de la segunda.
+    El modo combinado no choca con nada, porque sus sensores no llevan línea.
+    """
+    if datos.get(CONF_MODO) == MODO_POR_LINEA:
+        lineas = datos.get(CONF_LINEAS, [])
+    elif datos.get(CONF_LINEA):
+        lineas = [datos[CONF_LINEA]]
+    else:
+        lineas = []
+    return {linea.lower(): linea for linea in lineas if linea}
+
+
+def _mismo_paradero(datos_a, datos_b):
+    return (
+        (datos_a.get(CONF_SISTEMA) or SISTEMA_SANTIAGO)
+        == (datos_b.get(CONF_SISTEMA) or SISTEMA_SANTIAGO)
+        and datos_a.get(CONF_ZONA_UUID) == datos_b.get(CONF_ZONA_UUID)
+        and (datos_a.get(CONF_CODIGO) or "").upper() == (datos_b.get(CONF_CODIGO) or "").upper()
+    )
+
+
+def buscar_choque(hass, datos, excluir_entry_id=None):
+    """Otra entrada del mismo paradero con sensores para alguna de estas líneas.
+
+    Devuelve (entrada, líneas en común ya formateadas) o (None, "").
+    """
+    nuevas = _lineas_con_sensor(datos)
+    if not nuevas:
+        return None, ""
+    for entrada in hass.config_entries.async_entries(DOMAIN):
+        if entrada.entry_id == excluir_entry_id or not _mismo_paradero(entrada.data, datos):
+            continue
+        comunes = nuevas.keys() & _lineas_con_sensor(entrada.data).keys()
+        if comunes:
+            lineas = sorted((nuevas[c] for c in comunes), key=clave_linea)
+            return entrada, ", ".join(lineas)
+    return None, ""
+
+
 class RedMovilidadConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Alta de un paradero."""
 
@@ -362,13 +419,7 @@ class RedMovilidadConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             datos[CONF_ZONA_UUID] = self._zona_uuid
             datos[CONF_ZONA_NOMBRE] = self._zona_nombre
 
-        titulo = f"{self._nombre or self._codigo} ({self._codigo})"
-        if regional:
-            titulo += f" - {self._zona_nombre}"
-
-        if linea:
-            titulo += f" - línea {linea}"
-        elif modo == MODO_POR_LINEA:
+        if not linea and modo == MODO_POR_LINEA:
             lineas = await self.hass.async_add_executor_job(lineas_de_entrada, datos)
             if not lineas:
                 # No se pudo consultar: mejor una entrada combinada que una
@@ -376,7 +427,15 @@ class RedMovilidadConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 datos[CONF_MODO] = MODO_COMBINADO
             else:
                 datos[CONF_LINEAS] = lineas
-                titulo += " - todas las líneas"
+
+        titulo = titulo_de_entrada(datos)
+
+        otra, comunes = buscar_choque(self.hass, datos)
+        if otra is not None:
+            return self.async_abort(
+                reason="lineas_duplicadas",
+                description_placeholders={"lineas": comunes, "entrada": otra.title},
+            )
 
         return self.async_create_entry(title=titulo, data=datos)
 
@@ -391,6 +450,8 @@ class RedMovilidadOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         entry = self.config_entry
+        errors = {}
+        placeholders = {"lineas": "", "entrada": ""}
 
         if user_input is not None:
             linea = user_input.get(CONF_LINEA, "").strip()
@@ -399,9 +460,13 @@ class RedMovilidadOptionsFlow(config_entries.OptionsFlow):
             if linea:
                 self._nuevos_datos.update({CONF_LINEA: linea, CONF_MODO: MODO_COMBINADO})
                 self._nuevos_datos.pop(CONF_LINEAS, None)
-                return self._guardar()
-
-            return await self.async_step_modo()
+                otra, comunes = buscar_choque(self.hass, self._nuevos_datos, entry.entry_id)
+                if otra is None:
+                    return self._guardar()
+                errors["base"] = "lineas_duplicadas"
+                placeholders = {"lineas": comunes, "entrada": otra.title}
+            else:
+                return await self.async_step_modo()
 
         return self.async_show_form(
             step_id="init",
@@ -411,11 +476,15 @@ class RedMovilidadOptionsFlow(config_entries.OptionsFlow):
             description_placeholders={
                 "paradero": entry.data.get(CONF_CODIGO, ""),
                 "nombre": entry.data.get(CONF_NOMBRE, ""),
+                **placeholders,
             },
+            errors=errors,
         )
 
     async def async_step_modo(self, user_input=None):
         entry = self.config_entry
+        errors = {}
+        placeholders = {"lineas": "", "entrada": ""}
 
         if user_input is not None:
             self._nuevos_datos[CONF_LINEA] = ""
@@ -433,7 +502,11 @@ class RedMovilidadOptionsFlow(config_entries.OptionsFlow):
                 self._nuevos_datos.update({CONF_MODO: MODO_COMBINADO})
                 self._nuevos_datos.pop(CONF_LINEAS, None)
 
-            return self._guardar()
+            otra, comunes = buscar_choque(self.hass, self._nuevos_datos, entry.entry_id)
+            if otra is None:
+                return self._guardar()
+            errors["base"] = "lineas_duplicadas"
+            placeholders = {"lineas": comunes, "entrada": otra.title}
 
         actual = (
             ETIQUETA_POR_LINEA
@@ -447,8 +520,17 @@ class RedMovilidadOptionsFlow(config_entries.OptionsFlow):
                     [ETIQUETA_COMBINADO, ETIQUETA_POR_LINEA]
                 ),
             }),
+            description_placeholders=placeholders,
+            errors=errors,
         )
 
     def _guardar(self):
-        self.hass.config_entries.async_update_entry(self.config_entry, data=self._nuevos_datos)
+        entry = self.config_entry
+        cambios = {"data": self._nuevos_datos}
+        # El título describe la línea o el modo, así que se actualiza con
+        # ellos. Pero solo si es el que pusimos nosotros: si lo renombraste a
+        # mano en Home Assistant, se respeta.
+        if entry.title == titulo_de_entrada(entry.data):
+            cambios["title"] = titulo_de_entrada(self._nuevos_datos)
+        self.hass.config_entries.async_update_entry(entry, **cambios)
         return self.async_create_entry(title="", data={})

@@ -1,9 +1,12 @@
 """Sensores de llegada de buses: RED (Santiago) y Red Regional (resto de Chile)."""
 
+import logging
 from datetime import timedelta
 from functools import partial
 
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from . import api_regional
@@ -23,7 +26,63 @@ from .const import (
     SISTEMA_REGIONAL,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 SCAN_INTERVAL = timedelta(seconds=SCAN_INTERVAL_SEGUNDOS)
+
+
+def id_aviso_duplicadas(entry_id):
+    return f"lineas_duplicadas_{entry_id}"
+
+
+def _separar_ajenas(hass, entry, entidades):
+    """Aparta los sensores cuyo id ya pertenece a OTRA entrada.
+
+    Pasa si un mismo paradero tiene una entrada de "todas las líneas" y otra
+    de línea fija que comparten línea: ambas generan el mismo id, y Home
+    Assistant descartaría los de la segunda con un error poco claro. El
+    formulario ya impide crear entradas así, pero pueden existir de antes.
+    """
+    registro = er.async_get(hass)
+    propias, ajenas = [], {}
+    for entidad in entidades:
+        entity_id = registro.async_get_entity_id("sensor", DOMAIN, entidad.unique_id)
+        registrada = registro.async_get(entity_id) if entity_id else None
+        if registrada and registrada.config_entry_id not in (None, entry.entry_id):
+            ajenas.setdefault(registrada.config_entry_id, set()).add(entidad.linea or "")
+            continue
+        propias.append(entidad)
+    return propias, ajenas
+
+
+def _avisar_duplicadas(hass, entry, ajenas):
+    """Crea (o borra) el aviso en Ajustes → Reparaciones."""
+    if not ajenas:
+        ir.async_delete_issue(hass, DOMAIN, id_aviso_duplicadas(entry.entry_id))
+        return
+
+    otra_id, lineas = next(iter(ajenas.items()))
+    otra = hass.config_entries.async_get_entry(otra_id)
+    otra_titulo = otra.title if otra else otra_id
+    lineas_texto = ", ".join(sorted(lineas))
+    _LOGGER.warning(
+        "La entrada «%s» no crea sensores para la línea %s: ya los tiene la "
+        "entrada «%s» del mismo paradero. Borra una de las dos.",
+        entry.title, lineas_texto, otra_titulo,
+    )
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        id_aviso_duplicadas(entry.entry_id),
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="lineas_duplicadas",
+        translation_placeholders={
+            "entrada": entry.title,
+            "lineas": lineas_texto,
+            "otra": otra_titulo,
+        },
+    )
 
 
 def _origen(entry):
@@ -83,6 +142,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     else:
         entidades = [sensor(linea, 1), sensor(linea, 2)]
 
+    entidades, ajenas = _separar_ajenas(hass, entry, entidades)
+    _avisar_duplicadas(hass, entry, ajenas)
+
     # update_before_add: pedimos los datos antes de registrar las
     # entidades. Si no, HA las publica como "desconocido" y espera al
     # siguiente ciclo de sondeo, hasta un minuto en blanco tras el alta
@@ -140,6 +202,10 @@ class RedBusSensor(SensorEntity):
             self._attr_unique_id = f"{prefijo}_{numero_bus}"
 
         self._attr_device_info = dispositivo
+
+    @property
+    def linea(self):
+        return self._linea
 
     @property
     def native_value(self):

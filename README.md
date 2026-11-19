@@ -141,6 +141,12 @@ cambia de versión.
 Después, opcionalmente, filtras por línea. Si la dejas en blanco eliges entre
 modo combinado y una entidad por línea.
 
+Un mismo paradero puede tener varias entradas (por ejemplo, una por línea),
+pero **dos entradas no pueden compartir línea**: una de "todas las líneas" ya
+incluye los sensores de cada línea. El formulario lo impide y te dice qué
+entrada los tiene. Si te quedó un caso así de una versión anterior, aparece
+un aviso en *Ajustes → Reparaciones*.
+
 ### Cambiar línea o modo sin recrear la integración
 
 Cada entrada tiene botón **Configurar** (⚙️) para cambiar la línea filtrada o

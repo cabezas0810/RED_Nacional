@@ -2,6 +2,7 @@
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 
 from .const import DOMAIN
 
@@ -17,6 +18,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     return await hass.config_entries.async_unload_platforms(entry, PLATAFORMAS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Al borrar una entrada, se va también su aviso de líneas duplicadas."""
+    ir.async_delete_issue(hass, DOMAIN, f"lineas_duplicadas_{entry.entry_id}")
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry):

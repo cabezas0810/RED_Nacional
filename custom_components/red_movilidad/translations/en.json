@@ -81,7 +81,8 @@
       "gtfs_no_disponible": "Could not download the list of stops for this city. Try again in a few seconds."
     },
     "abort": {
-      "already_configured": "That stop is already configured with that route or mode."
+      "already_configured": "That stop is already configured with that route or mode.",
+      "lineas_duplicadas": "Route {lineas} at this stop already has sensors in the entry “{entrada}”. To change it, use Configure on that entry or delete it first."
     }
   },
   "options": {
@@ -99,6 +100,15 @@
           "modo": "Mode"
         }
       }
+    },
+    "error": {
+      "lineas_duplicadas": "Route {lineas} already has sensors in another entry for this stop: “{entrada}”. Choose another route or change that entry first."
+    }
+  },
+  "issues": {
+    "lineas_duplicadas": {
+      "title": "Routes repeated in two entries for the same stop",
+      "description": "The entry “{entrada}” has no sensors for route {lineas}, because the entry “{otra}” for the same stop already has them. Two entries cannot share a route.\n\nDelete the one you do not need in Settings → Devices & services, or change its route with Configure. Then restart Home Assistant to clear this notice."
     }
   }
 }
