@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Transporte público de Chile",
+        "title": "RED Nacional",
         "description": "¿Dónde está el paradero?",
         "data": {
           "sistema": "Sistema"

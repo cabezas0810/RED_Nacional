@@ -1,7 +1,7 @@
-# **RED y Red Regional (Chile)**
+# **RED Nacional**
 
-Integración para **Home Assistant** que crea sensores en tiempo real de los
-buses de Chile: minutos de espera y distancia del bus por paradero y línea.
+Integración **no oficial** para **Home Assistant** que crea sensores en
+tiempo real de los buses de Chile: minutos de espera y distancia del bus por paradero y línea.
 
 - **Santiago**: buses de **Red Movilidad** (RED).
 - **Regiones**: buses de **Red Regional**, en las 23 ciudades que publica su
@@ -85,13 +85,12 @@ Si quieres la línea siempre visible, usa "una entidad por línea".
 
 1. Añade este repositorio como **repositorio personalizado** en HACS
    (categoría *Integration*).
-2. Busca "RED y Red Regional (Chile)" e instálalo.
+2. Busca "RED Nacional" e instálalo.
 3. Reinicia Home Assistant.
 
 ## **Configuración**
 
-**Ajustes** → **Dispositivos y servicios** → **+ Añadir integración** → "RED
-y Red Regional". Primero eliges **Santiago** o **Regiones**.
+**Ajustes** → **Dispositivos y servicios** → **+ Añadir integración** → "RED Nacional". Primero eliges **Santiago** o **Regiones**.
 
 ### Santiago
 

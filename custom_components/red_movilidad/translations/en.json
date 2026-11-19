@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Chilean public transport",
+        "title": "RED Nacional",
         "description": "Where is the bus stop?",
         "data": {
           "sistema": "System"
