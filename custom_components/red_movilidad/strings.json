@@ -3,54 +3,54 @@
     "step": {
       "user": {
         "title": "RED Movilidad",
-        "description": "¿Cómo quieres identificar el paradero?",
-        "data": { "metodo": "Método" }
+        "description": "How do you want to identify the bus stop?",
+        "data": { "metodo": "Method" }
       },
       "codigo": {
-        "title": "Código del paradero",
-        "description": "Escribe el código tal cual aparece en la marquesina o en la app Red (por ejemplo PA433 o PI369).",
-        "data": { "codigo": "Código del paradero" }
+        "title": "Bus stop code",
+        "description": "Enter the code as shown on the stop sign or in the Red app (for example PA433 or PI369).",
+        "data": { "codigo": "Bus stop code" }
       },
       "buscar_linea": {
-        "title": "Buscar por línea",
-        "description": "Escribe el número de la línea (por ejemplo 506, J10 o 210) y luego eliges el paradero de su recorrido.",
-        "data": { "servicio": "Línea" }
+        "title": "Search by route",
+        "description": "Enter the route number (for example 506, J10 or 210), then pick a stop along it.",
+        "data": { "servicio": "Route" }
       },
       "elegir_paradero": {
-        "title": "Elegir paradero",
-        "description": "Paraderos del recorrido, en ambos sentidos.",
-        "data": { "paradero": "Paradero" }
+        "title": "Choose a stop",
+        "description": "Stops along the route, both directions.",
+        "data": { "paradero": "Bus stop" }
       },
       "linea": {
-        "title": "Filtrar por línea (opcional)",
-        "description": "Paradero {paradero} - {nombre}.\n\nSi dejas la línea en blanco podrás elegir entre dos sensores con las llegadas más próximas de cualquier línea, o un par de sensores por cada línea del paradero.",
-        "data": { "linea": "Línea" }
+        "title": "Filter by route (optional)",
+        "description": "Stop {paradero} - {nombre}.\n\nLeave the route blank to choose between two sensors with the nearest arrivals of any route, or one pair of sensors per route at the stop.",
+        "data": { "linea": "Route" }
       },
       "modo": {
-        "title": "Modo de los sensores",
-        "data": { "modo": "Modo" }
+        "title": "Sensor mode",
+        "data": { "modo": "Mode" }
       }
     },
     "error": {
-      "codigo_invalido": "El código no tiene el formato esperado (letras + número, por ejemplo PA433).",
-      "api_no_disponible": "No se pudo consultar red.cl. El predictor falla con frecuencia: vuelve a intentarlo en unos segundos.",
-      "linea_desconocida": "Esa línea no aparece en el listado de servicios de Red.",
-      "sin_resultados": "No se encontraron paraderos para esa línea."
+      "codigo_invalido": "The code does not look valid (letters + number, e.g. PA433).",
+      "api_no_disponible": "Could not reach red.cl. The predictor fails often: try again in a few seconds.",
+      "linea_desconocida": "That route is not in Red's service list.",
+      "sin_resultados": "No stops found for that route."
     },
     "abort": {
-      "already_configured": "Ese paradero ya está configurado con esa línea o modo."
+      "already_configured": "That stop is already configured with that route or mode."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Cambiar línea o modo",
-        "description": "Paradero {paradero} - {nombre}.\n\nDeja la línea en blanco para elegir el modo de los sensores.",
-        "data": { "linea": "Línea" }
+        "title": "Change route or mode",
+        "description": "Stop {paradero} - {nombre}.\n\nLeave the route blank to choose the sensor mode.",
+        "data": { "linea": "Route" }
       },
       "modo": {
-        "title": "Modo de los sensores",
-        "data": { "modo": "Modo" }
+        "title": "Sensor mode",
+        "data": { "modo": "Mode" }
       }
     }
   }
