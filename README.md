@@ -38,6 +38,7 @@ adaptado a la fuente de datos de Santiago.
 - [Comprobar que la API responde](#comprobar-que-la-api-responde)
 - [Ejemplos de tarjetas Lovelace](#ejemplos-de-tarjetas-lovelace)
 - [Diferencias con la integración de Zaragoza](#diferencias-con-la-integración-de-zaragoza)
+- [Fuente de los datos y condiciones de uso](#fuente-de-los-datos-y-condiciones-de-uso)
 
 ## **Qué sensores crea**
 
@@ -254,6 +255,39 @@ tap_action:
 | Distancia del vehículo | no la expone la API | sí, en metros y km |
 | Patente del bus | — | sí, cuando red.cl la entrega |
 
+## **Fuente de los datos y condiciones de uso**
+
+Los datos de llegada proceden de **Red Movilidad** (www.red.cl) y son
+propiedad del **Directorio de Transporte Público Metropolitano (DTPM)**,
+Ministerio de Transportes y Telecomunicaciones de Chile. Esta integración
+solo los consulta y los muestra tal cual los entrega el servicio.
+
+Según las [condiciones de uso y privacidad de red.cl](https://www.red.cl/condiciones-de-uso-y-privacidad/),
+conviene tener presente que:
+
+- Los contenidos **no pueden usarse con fines comerciales o de lucro de
+  ninguna clase**.
+- Al usar la información hay que **citar la fuente**.
+- El DTPM puede modificar esas condiciones en cualquier momento.
+
+Por eso, aunque el código de esta integración es MIT y su licencia permite el
+uso comercial, **esa licencia cubre el código, no los datos**. Quien instale
+la integración queda sujeto a las condiciones del DTPM respecto a la
+información que obtiene.
+
+En el momento de escribir esto, el `robots.txt` de red.cl no restringe
+ninguna ruta y sus condiciones no mencionan el acceso automatizado, el
+scraping ni límites de peticiones. Aun así, el intervalo de sondeo por
+defecto es de 60 s a propósito, y **no conviene** desplegar instancias
+públicas que concentren el tráfico de mucha gente: es lo que obligó a cerrar
+la instancia pública de [muZk/red-api](https://github.com/muZk/red-api).
+
+Consultas sobre el uso de los contenidos: `comunicaciones@dtpm.gob.cl`.
+
 ## **Licencia**
 
 MIT. Ver [LICENSE](LICENSE).
+
+Este proyecto es un port de [Zaragoza Tram](https://github.com/jrgim/Zaragoza_tram)
+de jrgim, también bajo licencia MIT. La licencia conserva el aviso de
+copyright del proyecto original junto al de este port.
