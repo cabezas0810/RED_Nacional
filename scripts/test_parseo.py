@@ -77,7 +77,7 @@ def check(nombre, obtenido, esperado):
 
 
 def main():
-    api = _cargar()
+    api, _ = _cargar()
     datos = api._normalizar_paradero(PAYLOAD)
 
     print("Paradero:")

@@ -1,10 +1,12 @@
-"""Sensores de llegada de buses RED en un paradero de Santiago."""
+"""Sensores de llegada de buses: RED (Santiago) y Red Regional (resto de Chile)."""
 
 from datetime import timedelta
+from functools import partial
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
 
+from . import api_regional
 from .api_utils import consultar_paradero
 from .const import (
     CONF_CODIGO,
@@ -12,12 +14,53 @@ from .const import (
     CONF_LINEAS,
     CONF_MODO,
     CONF_NOMBRE,
+    CONF_SISTEMA,
+    CONF_ZONA_NOMBRE,
+    CONF_ZONA_UUID,
     DOMAIN,
     MODO_POR_LINEA,
     SCAN_INTERVAL_SEGUNDOS,
+    SISTEMA_REGIONAL,
 )
 
 SCAN_INTERVAL = timedelta(seconds=SCAN_INTERVAL_SEGUNDOS)
+
+
+def _origen(entry):
+    """Cómo consultar el paradero, prefijo de ids y dispositivo, según el sistema.
+
+    Santiago conserva exactamente sus ids de siempre, para que las entidades
+    creadas antes de existir Red Regional no cambien ni pierdan historial.
+    """
+    datos = entry.data
+    codigo = datos[CONF_CODIGO]
+    nombre = datos.get(CONF_NOMBRE) or codigo
+
+    if datos.get(CONF_SISTEMA) == SISTEMA_REGIONAL:
+        zona_uuid = datos[CONF_ZONA_UUID]
+        ciudad = datos.get(CONF_ZONA_NOMBRE) or ""
+        consultar = partial(api_regional.consultar_paradero, zona_uuid, codigo)
+        prefijo = f"{DOMAIN}_{zona_uuid}_{codigo}"
+        dispositivo = DeviceInfo(
+            identifiers={(DOMAIN, f"{zona_uuid}_{codigo}")},
+            name=f"Paradero {codigo} - {nombre} ({ciudad})",
+            manufacturer="Red Regional (DTPR)",
+            model="Paradero",
+        )
+        return consultar, prefijo, dispositivo
+
+    consultar = partial(consultar_paradero, codigo)
+    prefijo = f"{DOMAIN}_{codigo}"
+    dispositivo = DeviceInfo(
+        identifiers={(DOMAIN, codigo)},
+        name=f"Paradero {codigo} - {nombre}",
+        manufacturer="Red Movilidad",
+        model="Paradero",
+        configuration_url=(
+            f"https://www.red.cl/planifica-tu-viaje/cuando-llega/?codsimt={codigo}"
+        ),
+    )
+    return consultar, prefijo, dispositivo
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -25,35 +68,46 @@ async def async_setup_entry(hass, entry, async_add_entities):
     nombre = entry.data.get(CONF_NOMBRE) or codigo
     modo = entry.data.get(CONF_MODO)
     linea = entry.data.get(CONF_LINEA) or None
+    consultar, prefijo, dispositivo = _origen(entry)
+
+    def sensor(linea_sensor, numero):
+        return RedBusSensor(
+            codigo, nombre, linea_sensor, numero, consultar, prefijo, dispositivo
+        )
 
     if modo == MODO_POR_LINEA:
         entidades = []
         for linea_paradero in entry.data.get(CONF_LINEAS, []):
-            entidades.append(RedBusSensor(codigo, nombre, linea_paradero, 1))
-            entidades.append(RedBusSensor(codigo, nombre, linea_paradero, 2))
-        # update_before_add: pedimos los datos antes de registrar las
-        # entidades. Si no, HA las publica como "desconocido" y espera al
-        # siguiente ciclo de sondeo, hasta un minuto en blanco tras el alta
-        # y tras cada reinicio. La caché del cliente hace que, de todas las
-        # entidades del mismo paradero, solo la primera llegue a la red.
-        async_add_entities(entidades, update_before_add=True)
-        return
+            entidades.append(sensor(linea_paradero, 1))
+            entidades.append(sensor(linea_paradero, 2))
+    else:
+        entidades = [sensor(linea, 1), sensor(linea, 2)]
 
-    async_add_entities(
-        [
-            RedBusSensor(codigo, nombre, linea, 1),
-            RedBusSensor(codigo, nombre, linea, 2),
-        ],
-        update_before_add=True,
-    )
+    # update_before_add: pedimos los datos antes de registrar las
+    # entidades. Si no, HA las publica como "desconocido" y espera al
+    # siguiente ciclo de sondeo, hasta un minuto en blanco tras el alta
+    # y tras cada reinicio. La caché del cliente hace que, de todas las
+    # entidades del mismo paradero, solo la primera llegue a la red.
+    async_add_entities(entidades, update_before_add=True)
+
+
+def _minutos(llegada):
+    """Minutos hasta la llegada.
+
+    Red Regional da una hora exacta, de la que el cliente calcula `minutos`.
+    red.cl solo da un rango, así que allí se usa su extremo bajo.
+    """
+    minutos = llegada.get("minutos")
+    return minutos if minutos is not None else llegada.get("minutos_min")
 
 
 class RedBusSensor(SensorEntity):
     """Bus N (1=próximo, 2=siguiente) en un paradero, opcionalmente por línea.
 
-    El estado son los minutos del extremo BAJO de la predicción: red.cl
-    devuelve rangos ("Entre 06 Y 08 min."), así que el máximo va en el
-    atributo `minutos_max` y el texto literal en `texto_original`.
+    El estado son los minutos que faltan. En Santiago, red.cl devuelve rangos
+    ("Entre 06 Y 08 min.") y el estado es su extremo bajo; en regiones viene
+    una hora exacta y el estado se calcula a partir de ella. En ambos casos
+    el rango va en `minutos_min`/`minutos_max` y el texto en `texto_original`.
 
     Sin filtro de línea, "próximo"/"siguiente" son las dos llegadas más
     cercanas de CUALQUIER línea del paradero, así que la línea de cada una
@@ -65,11 +119,14 @@ class RedBusSensor(SensorEntity):
     _attr_native_unit_of_measurement = "min"
     _attr_has_entity_name = False
 
-    def __init__(self, codigo, nombre_paradero, linea, numero_bus):
+    def __init__(
+        self, codigo, nombre_paradero, linea, numero_bus, consultar, prefijo, dispositivo
+    ):
         self._codigo = codigo
         self._nombre_paradero = nombre_paradero
         self._linea = linea
         self._numero_bus = numero_bus
+        self._consultar = consultar
         self._state = None
         self._attrs = {}
 
@@ -77,20 +134,12 @@ class RedBusSensor(SensorEntity):
 
         if linea:
             self._attr_name = f"Bus {linea} {etiqueta} - {nombre_paradero}"
-            self._attr_unique_id = f"{DOMAIN}_{codigo}_{linea}_{numero_bus}"
+            self._attr_unique_id = f"{prefijo}_{linea}_{numero_bus}"
         else:
             self._attr_name = f"Bus {etiqueta} - {nombre_paradero}"
-            self._attr_unique_id = f"{DOMAIN}_{codigo}_{numero_bus}"
+            self._attr_unique_id = f"{prefijo}_{numero_bus}"
 
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, codigo)},
-            name=f"Paradero {codigo} - {nombre_paradero}",
-            manufacturer="Red Movilidad",
-            model="Paradero",
-            configuration_url=(
-                f"https://www.red.cl/planifica-tu-viaje/cuando-llega/?codsimt={codigo}"
-            ),
-        )
+        self._attr_device_info = dispositivo
 
     @property
     def native_value(self):
@@ -101,10 +150,10 @@ class RedBusSensor(SensorEntity):
         return self._attrs
 
     def update(self):
-        datos = consultar_paradero(self._codigo)
+        datos = self._consultar()
 
         if datos is None:
-            # El predictor de red.cl falla a menudo, incluso tras reintentar:
+            # Los servidores fallan a menudo, incluso tras reintentar:
             # conservamos el último dato conocido en vez de vaciar el sensor.
             return
 
@@ -140,14 +189,14 @@ class RedBusSensor(SensorEntity):
 
     def _actualizar_sin_linea(self, datos, servicios):
         candidatas = [
-            (llegada["minutos_min"], servicio, llegada)
+            (_minutos(llegada), servicio, llegada)
             for servicio in servicios
             for llegada in servicio.get("llegadas", [])
-            if llegada.get("minutos_min") is not None
+            if _minutos(llegada) is not None
         ]
-        # Varias líneas empatan a menudo en el extremo bajo del rango
-        # ("En menos de 3 min" para dos buses distintos), así que desempatamos
-        # por distancia: el bus más cercano es el que llega antes.
+        # Varias líneas empatan a menudo en los minutos ("En menos de 3 min"
+        # para dos buses distintos), así que desempatamos por distancia: el
+        # bus más cercano es el que llega antes.
         candidatas.sort(key=lambda item: (item[0], item[2].get("distancia_m") or 10**9))
 
         if len(candidatas) < self._numero_bus:
@@ -161,8 +210,8 @@ class RedBusSensor(SensorEntity):
         self._aplicar(datos, servicio, llegada)
 
     def _aplicar(self, datos, servicio, llegada):
-        self._state = llegada.get("minutos_min")
-        self._attrs = self._base_attrs(datos) | {
+        self._state = _minutos(llegada)
+        atributos = self._base_attrs(datos) | {
             "linea": servicio.get("linea"),
             "destino": servicio.get("destino"),
             "minutos_min": llegada.get("minutos_min"),
@@ -177,6 +226,11 @@ class RedBusSensor(SensorEntity):
             "texto_original": llegada.get("texto"),
             "estado_servicio": servicio.get("mensaje"),
         }
+        # Solo Red Regional trae hora exacta y si la predicción es en vivo.
+        for clave in ("hora_llegada", "tiempo_real"):
+            if clave in llegada:
+                atributos[clave] = llegada[clave]
+        self._attrs = atributos
 
     def _base_attrs(self, datos):
         return {

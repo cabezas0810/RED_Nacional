@@ -2,40 +2,83 @@
   "config": {
     "step": {
       "user": {
-        "title": "RED Movilidad",
+        "title": "Chilean public transport",
+        "description": "Where is the bus stop?",
+        "data": {
+          "sistema": "System"
+        }
+      },
+      "santiago": {
+        "title": "RED Movilidad (Santiago)",
         "description": "How do you want to identify the bus stop?",
-        "data": { "metodo": "Method" }
+        "data": {
+          "metodo": "Method"
+        }
       },
       "codigo": {
         "title": "Bus stop code",
         "description": "Enter the code as shown on the stop sign or in the Red app (for example PA433 or PI369).",
-        "data": { "codigo": "Bus stop code" }
+        "data": {
+          "codigo": "Bus stop code"
+        }
       },
       "buscar_linea": {
         "title": "Search by route",
         "description": "Enter the route number (for example 506, J10 or 210), then pick a stop along it.",
-        "data": { "servicio": "Route" }
+        "data": {
+          "servicio": "Route"
+        }
       },
       "elegir_paradero": {
         "title": "Choose a stop",
         "description": "Stops along the route, both directions.",
-        "data": { "paradero": "Bus stop" }
+        "data": {
+          "paradero": "Bus stop"
+        }
+      },
+      "ciudad": {
+        "title": "Red Regional",
+        "description": "Choose the city.",
+        "data": {
+          "ciudad": "City"
+        }
+      },
+      "regional_paradero": {
+        "title": "Bus stop in {ciudad}",
+        "description": "Enter the stop code as shown in the Red Regional app, or part of its name to search for it (for example a street). Accents and capital letters do not matter.",
+        "data": {
+          "busqueda": "Code or name"
+        }
+      },
+      "regional_resultados": {
+        "title": "Choose a stop",
+        "description": "Stops matching your search. Some of their routes are shown next to each one, to tell apart stops with the same name.",
+        "data": {
+          "paradero": "Bus stop"
+        }
       },
       "linea": {
         "title": "Filter by route (optional)",
         "description": "Stop {paradero} - {nombre}.\n\nLeave the route blank to choose between two sensors with the nearest arrivals of any route, or one pair of sensors per route at the stop.",
-        "data": { "linea": "Route" }
+        "data": {
+          "linea": "Route"
+        }
       },
       "modo": {
         "title": "Sensor mode",
-        "data": { "modo": "Mode" }
+        "data": {
+          "modo": "Mode"
+        }
       }
     },
     "error": {
       "codigo_invalido": "The code does not look valid (letters + number, e.g. PA433).",
-      "api_no_disponible": "Could not reach red.cl. The predictor fails often: try again in a few seconds.",
+      "api_no_disponible": "Could not reach the server. It fails often: try again in a few seconds.",
       "linea_desconocida": "That route is not in Red's service list.",
-      "sin_resultados": "No stops found for that route."
+      "sin_resultados": "No stops found for that route.",
+      "paradero_no_encontrado": "There is no stop with that code or name in this city.",
+      "demasiados_resultados": "Too many stops match. Enter a more specific name, for example the corner of two streets.",
+      "gtfs_no_disponible": "Could not download the list of stops for this city. Try again in a few seconds."
     },
     "abort": {
       "already_configured": "That stop is already configured with that route or mode."
@@ -46,11 +89,15 @@
       "init": {
         "title": "Change route or mode",
         "description": "Stop {paradero} - {nombre}.\n\nLeave the route blank to choose the sensor mode.",
-        "data": { "linea": "Route" }
+        "data": {
+          "linea": "Route"
+        }
       },
       "modo": {
         "title": "Sensor mode",
-        "data": { "modo": "Mode" }
+        "data": {
+          "modo": "Mode"
+        }
       }
     }
   }

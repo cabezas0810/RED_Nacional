@@ -2,40 +2,83 @@
   "config": {
     "step": {
       "user": {
-        "title": "RED Movilidad",
+        "title": "Transporte público de Chile",
+        "description": "¿Dónde está el paradero?",
+        "data": {
+          "sistema": "Sistema"
+        }
+      },
+      "santiago": {
+        "title": "RED Movilidad (Santiago)",
         "description": "¿Cómo quieres identificar el paradero?",
-        "data": { "metodo": "Método" }
+        "data": {
+          "metodo": "Método"
+        }
       },
       "codigo": {
         "title": "Código del paradero",
         "description": "Escribe el código tal cual aparece en la marquesina o en la app Red (por ejemplo PA433 o PI369).",
-        "data": { "codigo": "Código del paradero" }
+        "data": {
+          "codigo": "Código del paradero"
+        }
       },
       "buscar_linea": {
         "title": "Buscar por línea",
         "description": "Escribe el número de la línea (por ejemplo 506, J10 o 210) y luego eliges el paradero de su recorrido.",
-        "data": { "servicio": "Línea" }
+        "data": {
+          "servicio": "Línea"
+        }
       },
       "elegir_paradero": {
         "title": "Elegir paradero",
         "description": "Paraderos del recorrido, en ambos sentidos.",
-        "data": { "paradero": "Paradero" }
+        "data": {
+          "paradero": "Paradero"
+        }
+      },
+      "ciudad": {
+        "title": "Red Regional",
+        "description": "Elige la ciudad.",
+        "data": {
+          "ciudad": "Ciudad"
+        }
+      },
+      "regional_paradero": {
+        "title": "Paradero en {ciudad}",
+        "description": "Escribe el código del paradero tal como aparece en la app Red Regional, o parte de su nombre para buscarlo (por ejemplo una calle). No importan las tildes ni las mayúsculas.",
+        "data": {
+          "busqueda": "Código o nombre"
+        }
+      },
+      "regional_resultados": {
+        "title": "Elegir paradero",
+        "description": "Paraderos que coinciden con tu búsqueda. Junto a cada uno aparecen algunas de sus líneas, para distinguir los que tienen el mismo nombre.",
+        "data": {
+          "paradero": "Paradero"
+        }
       },
       "linea": {
         "title": "Filtrar por línea (opcional)",
         "description": "Paradero {paradero} - {nombre}.\n\nSi dejas la línea en blanco podrás elegir entre dos sensores con las llegadas más próximas de cualquier línea, o un par de sensores por cada línea del paradero.",
-        "data": { "linea": "Línea" }
+        "data": {
+          "linea": "Línea"
+        }
       },
       "modo": {
         "title": "Modo de los sensores",
-        "data": { "modo": "Modo" }
+        "data": {
+          "modo": "Modo"
+        }
       }
     },
     "error": {
       "codigo_invalido": "El código no tiene el formato esperado (letras + número, por ejemplo PA433).",
-      "api_no_disponible": "No se pudo consultar red.cl. El predictor falla con frecuencia: vuelve a intentarlo en unos segundos.",
+      "api_no_disponible": "No se pudo consultar el servidor. Falla con frecuencia: vuelve a intentarlo en unos segundos.",
       "linea_desconocida": "Esa línea no aparece en el listado de servicios de Red.",
-      "sin_resultados": "No se encontraron paraderos para esa línea."
+      "sin_resultados": "No se encontraron paraderos para esa línea.",
+      "paradero_no_encontrado": "No hay ningún paradero con ese código ni con ese nombre en esta ciudad.",
+      "demasiados_resultados": "Demasiados paraderos coinciden. Escribe un nombre más concreto, por ejemplo el cruce de dos calles.",
+      "gtfs_no_disponible": "No se pudo descargar la lista de paraderos de esta ciudad. Vuelve a intentarlo en unos segundos."
     },
     "abort": {
       "already_configured": "Ese paradero ya está configurado con esa línea o modo."
@@ -46,11 +89,15 @@
       "init": {
         "title": "Cambiar línea o modo",
         "description": "Paradero {paradero} - {nombre}.\n\nDeja la línea en blanco para elegir el modo de los sensores.",
-        "data": { "linea": "Línea" }
+        "data": {
+          "linea": "Línea"
+        }
       },
       "modo": {
         "title": "Modo de los sensores",
-        "data": { "modo": "Modo" }
+        "data": {
+          "modo": "Modo"
+        }
       }
     }
   }

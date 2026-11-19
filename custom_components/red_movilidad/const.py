@@ -40,12 +40,41 @@ PREDICCION_CACHE_TTL = 25
 # exceso de peticiones automatizadas).
 SCAN_INTERVAL_SEGUNDOS = 60
 
+# ---------------------------------------------------------------------------
+# Red Regional (ciudades fuera de Santiago), de la DTPR
+#
+# Es el servidor de la app móvil Red Regional, tampoco documentado. Responde
+# sin token ni identificación especial; nos presentamos con el mismo
+# USER_AGENT honesto que para red.cl.
+# ---------------------------------------------------------------------------
+
+REGIONAL_URL = "https://phone.dtpr.transapp.cl/v7/phone"
+
+# La lista de ciudades casi nunca cambia.
+ZONAS_TTL = 24 * 3600
+
+# El GTFS (paraderos, líneas y destinos de cada ciudad) trae un número de
+# versión: lo revisamos cada 6 h y solo lo descargamos de nuevo si cambió.
+GTFS_REVISION_TTL = 6 * 3600
+
+# Tope de seguridad para lo que aceptamos descomprimir de un GTFS. Los reales
+# pesan entre 30 y 400 KB comprimidos.
+GTFS_MAX_BYTES = 50 * 1024 * 1024
+
 # Claves de configuración
+CONF_SISTEMA = "sistema"
+CONF_ZONA_UUID = "zona_uuid"
+CONF_ZONA_NOMBRE = "zona_nombre"
 CONF_CODIGO = "codigo"
 CONF_NOMBRE = "nombre"
 CONF_LINEA = "linea"
 CONF_MODO = "modo"
 CONF_LINEAS = "lineas"
+
+# Las entradas creadas antes de existir Red Regional no tienen "sistema":
+# se tratan como Santiago.
+SISTEMA_SANTIAGO = "santiago"
+SISTEMA_REGIONAL = "regional"
 
 MODO_COMBINADO = "combinado"
 MODO_POR_LINEA = "por_linea"

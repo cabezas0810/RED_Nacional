@@ -1,12 +1,14 @@
 {
     "domain": "red_movilidad",
-    "name": "RED Movilidad Santiago",
-    "codeowners": ["@cabezas0810"],
+    "name": "RED y Red Regional (Chile)",
+    "codeowners": [
+        "@cabezas0810"
+    ],
     "config_flow": true,
     "dependencies": [],
     "documentation": "https://github.com/cabezas0810/RED_Santiago",
     "iot_class": "cloud_polling",
     "issue_tracker": "https://github.com/cabezas0810/RED_Santiago/issues",
     "requirements": [],
-    "version": "0.1.0"
+    "version": "0.2.0"
 }

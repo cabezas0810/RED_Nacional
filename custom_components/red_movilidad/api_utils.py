@@ -33,8 +33,11 @@ RE_JWT = re.compile(r"\$jwt\s*=\s*'([^']+)'")
 
 # Formatos de tiempo que devuelve el predictor.
 RE_ENTRE = re.compile(r"entre\s+0*(\d+)\s*y\s*0*(\d+)\s*min", re.IGNORECASE)
+# Red Regional usa "10 a 14 min" donde red.cl dice "Entre 10 Y 14 min".
+RE_RANGO_A = re.compile(r"0*(\d+)\s+a\s+0*(\d+)\s*min", re.IGNORECASE)
 RE_MENOS_DE = re.compile(r"menos\s+de\s+0*(\d+)\s*min", re.IGNORECASE)
-RE_MAS_DE = re.compile(r"m[áa]s\s+de\s+0*(\d+)\s*min", re.IGNORECASE)
+# "Mas de 30 min." en red.cl, "+ de 25 min" en Red Regional.
+RE_MAS_DE = re.compile(r"(?:m[áa]s|\+)\s*de\s+0*(\d+)\s*min", re.IGNORECASE)
 RE_MIN = re.compile(r"0*(\d+)\s*min", re.IGNORECASE)
 
 _lock = threading.Lock()
@@ -124,7 +127,12 @@ def invalidar_token():
 # ---------------------------------------------------------------------------
 
 def parse_tiempo(texto):
-    """'Entre 06 Y 08 min.' -> (6, 8) | 'Llegando.' -> (0, 0) | otro -> (None, None)."""
+    """Rango de minutos de un texto de llegada, o (None, None).
+
+    red.cl:        'Entre 06 Y 08 min.' -> (6, 8) | 'Mas de 30 min.' -> (30, None)
+    Red Regional:  '10 a 14 min'        -> (10, 14) | '+ de 25 min'  -> (25, None)
+    Ambos:         'Llegando'           -> (0, 0)
+    """
     if not texto:
         return None, None
 
@@ -133,6 +141,10 @@ def parse_tiempo(texto):
         return 0, 0
 
     match = RE_ENTRE.search(limpio)
+    if match:
+        return int(match.group(1)), int(match.group(2))
+
+    match = RE_RANGO_A.search(limpio)
     if match:
         return int(match.group(1)), int(match.group(2))
 
@@ -150,6 +162,14 @@ def parse_tiempo(texto):
         return minutos, minutos
 
     return None, None
+
+
+def clave_linea(linea):
+    """Orden natural de líneas: 1A, 1B, 2B, 10B en vez de 10B, 1A, 1B, 2B."""
+    match = re.match(r"(\d+)(.*)", linea or "")
+    if match:
+        return (0, int(match.group(1)), match.group(2).lower())
+    return (1, 0, (linea or "").lower())
 
 
 def _a_entero(valor):

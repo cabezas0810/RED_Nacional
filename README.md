@@ -1,11 +1,15 @@
-# **RED Movilidad Santiago**
+# **RED y Red Regional (Chile)**
 
 Integración para **Home Assistant** que crea sensores en tiempo real de los
-buses de **Red Movilidad** (Santiago de Chile): minutos de espera y distancia
-del bus por paradero y línea.
+buses de Chile: minutos de espera y distancia del bus por paradero y línea.
+
+- **Santiago**: buses de **Red Movilidad** (RED).
+- **Regiones**: buses de **Red Regional**, en las 23 ciudades que publica su
+  servidor, de Arica a Punta Arenas (Concepción, Valparaíso, Temuco, La
+  Serena, Antofagasta, Puerto Montt...).
 
 Es un port de la integración [Zaragoza Tram](https://github.com/jrgim/Zaragoza_tram),
-adaptado a la fuente de datos de Santiago.
+adaptado a las fuentes de datos de Chile.
 
 > ## ⚠️ Antes de instalar: de dónde salen los datos
 >
@@ -28,6 +32,14 @@ adaptado a la fuente de datos de Santiago.
 >   exceso de peticiones automatizadas.
 > - El predictor **falla con frecuencia**; la integración reintenta hasta 3
 >   veces y, si no hay respuesta, conserva el último dato conocido.
+>
+> **En regiones** los datos salen del servidor de la **app móvil Red
+> Regional** de la DTPR, que tampoco está documentado. Responde sin token ni
+> identificación especial, y la integración se presenta con un `User-Agent`
+> propio, sin hacerse pasar por la app oficial. Valen las mismas advertencias,
+> con una más: los [términos de la app](https://www.dtpr.cl/terminos) limitan
+> su uso a fines personales y prohíben la ingeniería inversa de la app (ver
+> [Fuente de los datos](#fuente-de-los-datos-y-condiciones-de-uso)).
 
 ## **Índice**
 
@@ -73,13 +85,17 @@ Si quieres la línea siempre visible, usa "una entidad por línea".
 
 1. Añade este repositorio como **repositorio personalizado** en HACS
    (categoría *Integration*).
-2. Busca "RED Movilidad Santiago" e instálalo.
+2. Busca "RED y Red Regional (Chile)" e instálalo.
 3. Reinicia Home Assistant.
 
 ## **Configuración**
 
 **Ajustes** → **Dispositivos y servicios** → **+ Añadir integración** → "RED
-Movilidad". Primero eliges cómo identificar el paradero:
+y Red Regional". Primero eliges **Santiago** o **Regiones**.
+
+### Santiago
+
+Eliges cómo identificar el paradero:
 
 - **Ya sé el código del paradero**: escribe el código de la marquesina o de la
   app Red (`PA433`, `PI369`). Se valida contra red.cl y se usa el nombre real
@@ -87,6 +103,27 @@ Movilidad". Primero eliges cómo identificar el paradero:
 - **Buscar el paradero por línea**: escribe la línea (`506`, `J10`, `210`) y
   elige el paradero de su recorrido, con nombre y comuna. Esta búsqueda usa
   `restservice_v2/rest/getrecorrido`, que no necesita token.
+
+### Regiones
+
+1. Eliges la **ciudad**, de la lista que publica el propio servidor.
+2. Escribes el **código del paradero** tal como aparece en la app Red Regional
+   o **parte de su nombre**. Cada ciudad usa su propio formato de código
+   (`1039` en Temuco, `P44723` en Concepción, `PF-175` en Arica,
+   `PR-V-147` en Valparaíso), así que no se valida con un patrón sino contra
+   la lista de paraderos de la ciudad.
+3. Si buscaste por nombre, eliges entre los resultados. Basta con que
+   aparezcan todas las palabras, en cualquier orden y sin importar tildes:
+   como los paraderos se llaman por cruces de calles, `portales prat`
+   encuentra "Diego Portales esq. Arturo Prat". Junto a cada resultado salen
+   algunas de sus líneas, para distinguir los paraderos con el mismo nombre
+   (uno a cada lado de la calle).
+
+La lista de paraderos, líneas y destinos de cada ciudad es un GTFS de entre 30
+y 400 KB que la integración descarga una vez y solo vuelve a bajar cuando
+cambia de versión.
+
+### En ambos casos
 
 Después, opcionalmente, filtras por línea. Si la dejas en blanco eliges entre
 modo combinado y una entidad por línea.
@@ -135,6 +172,19 @@ En modo combinado, cuando dos líneas empatan en el extremo bajo del rango
 (muy habitual con "En menos de 3 min"), se ordena por **distancia**: el bus
 más cercano se considera el próximo.
 
+### Atributos extra en regiones
+
+```yaml
+hora_llegada: "2026-11-19T21:49:12+00:00"   # hora exacta estimada
+tiempo_real: true                           # false = horario programado
+```
+
+**El estado se calcula distinto según el sistema.** red.cl solo da un rango
+("Entre 06 Y 08 min."), así que en Santiago el estado es su extremo bajo. Red
+Regional da además una hora exacta, así que en regiones el estado son los
+minutos hasta esa hora. En ambos casos el rango está en `minutos_min` y
+`minutos_max`.
+
 ## **Comprobar que la API responde**
 
 Antes de culpar a Home Assistant, prueba la fuente directamente:
@@ -147,10 +197,19 @@ Imprime si el token se obtuvo y, línea por línea, los dos próximos buses con
 tiempo, distancia y patente. Con un segundo argumento filtra por línea
 (`python3 scripts/probar_api.py PA433 506`).
 
+Para regiones:
+
+```bash
+python3 scripts/probar_api.py --ciudades
+python3 scripts/probar_api.py --ciudad Temuco --buscar "portales prat"
+python3 scripts/probar_api.py --ciudad Temuco 1039 1A
+```
+
 Para comprobar el parseo sin tocar la red:
 
 ```bash
 python3 scripts/test_parseo.py
+python3 scripts/test_regional.py
 ```
 
 ## **Ejemplos de tarjetas Lovelace**
@@ -245,15 +304,15 @@ tap_action:
 
 ## **Diferencias con la integración de Zaragoza**
 
-| | Zaragoza Tram | RED Movilidad Santiago |
-|---|---|---|
-| Fuente | API abierta del Ayuntamiento, documentada | Endpoint interno de red.cl, no documentado |
-| Autenticación | ninguna | token JWT leído de la web, caduca ~55 min |
-| Modos tranvía/bus | sí | solo bus (Metro no usa el predictor) |
-| Selección de parada | lista fija embebida + listado de postes | código validado en vivo, o búsqueda por línea |
-| Estado del sensor | minutos exactos | minutos del extremo bajo del rango |
-| Distancia del vehículo | no la expone la API | sí, en metros y km |
-| Patente del bus | — | sí, cuando red.cl la entrega |
+| | Zaragoza Tram | Santiago (RED) | Regiones (Red Regional) |
+|---|---|---|---|
+| Fuente | API abierta del Ayuntamiento, documentada | Endpoint interno de red.cl, no documentado | Servidor de la app Red Regional, no documentado |
+| Autenticación | ninguna | token JWT leído de la web, caduca ~55 min | ninguna |
+| Modos tranvía/bus | sí | solo bus (Metro no usa el predictor) | solo bus |
+| Selección de parada | lista fija embebida + listado de postes | código validado en vivo, o búsqueda por línea | ciudad, y luego código o búsqueda por nombre en el GTFS |
+| Estado del sensor | minutos exactos | minutos del extremo bajo del rango | minutos hasta la hora exacta estimada |
+| Distancia del vehículo | no la expone la API | sí, en metros y km | sí, en metros y km |
+| Patente del bus | — | sí, cuando red.cl la entrega | sí |
 
 ## **Fuente de los datos y condiciones de uso**
 
@@ -283,6 +342,32 @@ públicas que concentren el tráfico de mucha gente: es lo que obligó a cerrar
 la instancia pública de [muZk/red-api](https://github.com/muZk/red-api).
 
 Consultas sobre el uso de los contenidos: `comunicaciones@dtpm.gob.cl`.
+
+### Red Regional (regiones)
+
+Los datos de regiones proceden de la **app Red Regional**, de la **División
+de Transporte Público Regional (DTPR)** del Ministerio de Transportes y
+Telecomunicaciones. Las posiciones salen del GPS que deben llevar los buses
+de los perímetros de exclusión, y las predicciones las calcula el servidor de
+la app.
+
+Según los [términos de la app](https://www.dtpr.cl/terminos):
+
+- El uso es **estrictamente personal**.
+- Se prohíbe la **comercialización o distribución** de sus contenidos.
+- Se prohíbe **descompilar, descifrar o alterar la aplicación**.
+- La DTPR puede retirar el acceso ante incumplimientos y modificar los
+  términos en cualquier momento.
+
+Esta integración no descompila ni modifica la app: consulta por HTTP un
+servidor que responde a peticiones normales, con un `User-Agent` propio, y
+no envía las cabeceras ni identificadores con que se identifica la app
+oficial. Aun así, ese servidor no es una API pública, así que **úsala solo
+para fines personales** y asume que puede dejar de funcionar sin aviso.
+
+La integración ignora a propósito los **reportes de usuarios** que el
+servidor incluye junto a las predicciones (por ejemplo, "Paradero en buen
+estado"): no son avisos del servicio.
 
 ## **Licencia**
 

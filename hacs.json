@@ -1,7 +1,9 @@
 {
-    "name": "RED Movilidad Santiago",
+    "name": "RED y Red Regional (Chile)",
     "render_readme": true,
     "content_in_root": false,
     "zip_release": false,
-    "country": ["CL"]
+    "country": [
+        "CL"
+    ]
 }
