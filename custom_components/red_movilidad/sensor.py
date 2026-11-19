@@ -31,13 +31,21 @@ async def async_setup_entry(hass, entry, async_add_entities):
         for linea_paradero in entry.data.get(CONF_LINEAS, []):
             entidades.append(RedBusSensor(codigo, nombre, linea_paradero, 1))
             entidades.append(RedBusSensor(codigo, nombre, linea_paradero, 2))
-        async_add_entities(entidades)
+        # update_before_add: pedimos los datos antes de registrar las
+        # entidades. Si no, HA las publica como "desconocido" y espera al
+        # siguiente ciclo de sondeo, hasta un minuto en blanco tras el alta
+        # y tras cada reinicio. La caché del cliente hace que, de todas las
+        # entidades del mismo paradero, solo la primera llegue a la red.
+        async_add_entities(entidades, update_before_add=True)
         return
 
-    async_add_entities([
-        RedBusSensor(codigo, nombre, linea, 1),
-        RedBusSensor(codigo, nombre, linea, 2),
-    ])
+    async_add_entities(
+        [
+            RedBusSensor(codigo, nombre, linea, 1),
+            RedBusSensor(codigo, nombre, linea, 2),
+        ],
+        update_before_add=True,
+    )
 
 
 class RedBusSensor(SensorEntity):
